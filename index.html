@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>산화·환원 가상 실험실 — 구리와 산화구리</title>
+<style>
+  :root{
+    --paper:#FFFAEF; --panel:#FFFFFF; --ink:#2B2620; --ink-soft:#6E6356; --line:#E7DCC8;
+    --stage:#F3EAD8; --stage-dim:#1b2531; --bench:#D9C7A6; --bench-edge:#C2AC83;
+    --oxid:#E0843B; --oxid-deep:#C75D3C; --reduc:#3A86C8; --reduc-deep:#2A6AA0;
+    --copper:#C8702D; --copper-lite:#E59A57; --copper-shine:#FFE0B0; --cuo:#231F1C;
+    --carbon:#2E2A28; --mix:#34302C; --lime:#EAF1ED; --green:#2E6B4F; --mustard:#E8A33D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{font-family:"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #FFFDF7, var(--paper));
+    color:var(--ink); min-height:100vh; overflow-x:hidden;}
+  .mono{font-family:"Consolas","SFMono-Regular",ui-monospace,Menlo,monospace;}
+
+  header{max-width:1080px; margin:0 auto; padding:18px 20px 6px; display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .brand h1{margin:0; font-size:clamp(20px,3.4vw,30px); letter-spacing:-.5px; line-height:1.1;}
+  .brand .eyebrow{display:inline-block; font-size:12px; font-weight:800; letter-spacing:.18em; color:var(--oxid-deep);
+    background:#FBE9D8; border:1px solid #F2D2B6; padding:4px 10px; border-radius:999px; margin-bottom:8px;}
+  .stage-tabs{display:flex; gap:6px; background:#F1E6D2; padding:5px; border-radius:14px; border:1px solid var(--line);}
+  .stage-tabs button{font:inherit; font-weight:800; font-size:13px; border:0; cursor:pointer; padding:9px 14px; border-radius:10px;
+    color:var(--ink-soft); background:transparent; display:flex; align-items:center; gap:7px;}
+  .stage-tabs button .dot{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--ink-soft);}
+  .stage-tabs button.active{background:#fff; color:var(--ink); box-shadow:0 2px 0 rgba(0,0,0,.04);}
+  .stage-tabs button.active .dot{border-color:var(--oxid); color:#fff; background:var(--oxid);}
+  .stage-tabs button.done .dot{background:var(--green); border-color:var(--green); color:#fff;}
+
+  main{max-width:1080px; margin:0 auto; padding:8px 20px 28px; display:grid; grid-template-columns:1fr 332px; gap:18px;}
+  @media(max-width:880px){ main{grid-template-columns:1fr;} }
+
+  .stage-wrap{position:relative; border-radius:22px; overflow:hidden; border:1px solid var(--line);
+    background:linear-gradient(180deg,#FBF4E6, var(--stage)); box-shadow:0 12px 30px -18px rgba(80,60,30,.45); transition:background .6s ease;}
+  .stage-wrap.dim{background:radial-gradient(640px 400px at 40% 58%, #29384a, var(--stage-dim));}
+  svg.scene{display:block; width:100%; height:auto; touch-action:none;}
+  #spoonInner,#flame,#powder{transform-box:fill-box;}
+  #spoonInner{transform-origin:62% 72%;}
+  #flame{transform-origin:50% 90%;}
+  #powder{transform-origin:50% 100%;}
+  .scene-hint{position:absolute; left:16px; top:14px; z-index:5; font-size:12.5px; font-weight:800; color:var(--ink-soft);
+    background:rgba(255,255,255,.82); border:1px solid var(--line); padding:6px 11px; border-radius:999px; backdrop-filter:blur(4px);
+    transition:color .4s, background .4s, border-color .4s; max-width:72%;}
+  .stage-wrap.dim .scene-hint{color:#dfe8f0; background:rgba(28,39,51,.62); border-color:rgba(255,255,255,.15);}
+  .atom-btn{position:absolute; right:14px; top:12px; z-index:6; font:inherit; font-weight:800; font-size:13px; cursor:pointer; border:0;
+    padding:9px 13px; border-radius:12px; color:#fff; background:linear-gradient(135deg,var(--reduc),var(--reduc-deep));
+    box-shadow:0 6px 16px -6px rgba(42,106,160,.7); opacity:0; pointer-events:none; transition:opacity .3s, transform .15s;}
+  .atom-btn.ready{opacity:1; pointer-events:auto; animation:nudge 1.8s ease-in-out infinite;}
+  .atom-btn:active{transform:scale(.95);}
+  @keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  .dz{fill:transparent; stroke:transparent; stroke-width:3; stroke-dasharray:9 7; transition:stroke .2s;}
+  .dz.hot{stroke:var(--oxid); animation:dz 1s linear infinite, dzp 1.4s ease-in-out infinite;}
+  @keyframes dz{to{stroke-dashoffset:-32;}} @keyframes dzp{0%,100%{opacity:.55}50%{opacity:1}}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px 16px 14px; box-shadow:0 10px 24px -20px rgba(80,60,30,.5);}
+  .panel + .panel{margin-top:14px;}
+  .guide{display:flex; gap:12px; align-items:flex-start;}
+  .guide .face{flex:0 0 auto; width:46px;height:46px;border-radius:14px; background:linear-gradient(135deg,#FFE6C2,#FFD09A);
+    display:grid;place-items:center; font-size:24px; border:1px solid #F2D2B6;}
+  .guide .bubble{flex:1;}
+  .guide .step-no{font-size:11px;font-weight:900;letter-spacing:.12em;color:var(--oxid-deep);}
+  .guide .say{margin:2px 0 0; font-size:15.5px; font-weight:700; line-height:1.45;}
+  .guide .sub{margin:6px 0 0; font-size:13px; color:var(--ink-soft); line-height:1.5;}
+  .progress{display:flex; gap:5px; margin-top:14px;}
+  .progress i{height:6px; flex:1; border-radius:99px; background:#EFE4CF;}
+  .progress i.on{background:var(--oxid);} .progress i.done{background:var(--green);}
+  .nextbtn{display:none; width:100%; margin-top:13px; font:inherit; font-weight:800; font-size:14.5px; border:0; cursor:pointer; padding:13px;
+    border-radius:13px; color:#fff; background:linear-gradient(135deg,var(--green),#245840); box-shadow:0 9px 20px -10px rgba(46,107,79,.7);}
+  .nextbtn.show{display:block; animation:pop .3s;}
+  .nextbtn.concl{background:linear-gradient(135deg,var(--oxid),var(--oxid-deep)); box-shadow:0 9px 20px -10px rgba(199,93,60,.7);}
+  .nextbtn:active{transform:scale(.99);}
+  .eq-card{margin-top:14px; border-radius:14px; padding:13px 14px; background:linear-gradient(180deg,#FFFDF8,#FBF3E4); border:1px solid var(--line); display:none;}
+  .eq-card .lab{font-size:11px;font-weight:900;letter-spacing:.12em;color:var(--ink-soft);}
+  .eq{font-size:clamp(15px,2.2vw,18px); font-weight:700; margin-top:7px; letter-spacing:.3px; line-height:1.6;}
+  .eq .sub{font-size:.72em; vertical-align:-.25em;}
+  .log h3{margin:0 0 8px; font-size:13px; letter-spacing:.04em; color:var(--ink-soft); font-weight:800;}
+  .log ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow:auto;}
+  .log li{font-size:13.5px; line-height:1.45; padding:9px 11px; border-radius:11px; background:#FAF4E8; border:1px solid var(--line);
+    display:flex; gap:9px; opacity:0; transform:translateY(6px); animation:logIn .4s forwards;}
+  @keyframes logIn{to{opacity:1; transform:none;}}
+
+  .shelf{grid-column:1 / -1; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:13px 14px;}
+  .shelf .lab{font-size:11px; font-weight:900; letter-spacing:.1em; color:var(--ink-soft); margin-bottom:9px;}
+  .chips{display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;}
+  .chip{position:relative; cursor:grab; border:1.5px solid var(--line); background:#FCF7EC; border-radius:14px; padding:9px 13px 9px 10px;
+    display:flex; align-items:center; gap:8px; font:inherit; font-weight:800; font-size:13.5px; color:var(--ink); touch-action:none; user-select:none;
+    transition:transform .12s, box-shadow .2s, border-color .2s, opacity .2s;}
+  .chip svg{width:30px;height:30px; flex:0 0 auto; pointer-events:none;}
+  .chip .grip{font-size:10px; color:var(--ink-soft); font-weight:700; margin-left:2px;}
+  .chip.glow{border-color:var(--oxid); box-shadow:0 0 0 3px rgba(224,132,59,.22), 0 8px 18px -10px rgba(224,132,59,.6); animation:chipPulse 1.5s ease-in-out infinite;}
+  @keyframes chipPulse{0%,100%{box-shadow:0 0 0 3px rgba(224,132,59,.18),0 6px 14px -10px rgba(224,132,59,.5);}50%{box-shadow:0 0 0 6px rgba(224,132,59,.28),0 10px 22px -10px rgba(224,132,59,.7);}}
+  .chip.disabled{opacity:.32; pointer-events:none; cursor:default; filter:grayscale(.4);}
+  .chip.shake{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .reset{margin-left:auto; font:inherit; font-weight:800; font-size:12.5px; cursor:pointer; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); padding:8px 13px; border-radius:11px;}
+  .reset:active{transform:scale(.96);}
+  .ghost{position:fixed; z-index:90; width:50px;height:50px; pointer-events:none; transform:translate(-50%,-50%) scale(1.15); filter:drop-shadow(0 8px 14px rgba(0,0,0,.3));}
+  .ghost svg{width:100%;height:100%;}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; font-weight:700; font-size:13.5px;
+    padding:11px 18px; border-radius:12px; opacity:0; pointer-events:none; transition:.3s; z-index:95; box-shadow:0 10px 30px -8px rgba(0,0,0,.4);}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .modal{position:fixed; inset:0; z-index:100; display:none; place-items:center; padding:18px; background:rgba(30,24,16,.55); backdrop-filter:blur(3px);}
+  .modal.open{display:grid;}
+  .sheet{background:var(--panel); border-radius:22px; width:min(560px,100%); max-height:90vh; overflow:auto; border:1px solid var(--line); box-shadow:0 30px 70px -20px rgba(0,0,0,.5); animation:pop .35s;}
+  @keyframes pop{from{transform:scale(.92) translateY(10px); opacity:0;}to{transform:none;opacity:1;}}
+  .sheet .sh-head{padding:18px 20px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;}
+  .sheet h2{margin:0; font-size:19px;}
+  .sheet .x{font:inherit; font-weight:900; font-size:18px; border:0; background:#F1E6D2; width:34px;height:34px;border-radius:10px;cursor:pointer; color:var(--ink-soft);}
+  .sheet .sh-body{padding:16px 20px 22px;}
+  .atom-stage{position:relative; height:240px; border-radius:16px; overflow:hidden; margin-bottom:8px; background:radial-gradient(420px 220px at 50% 50%,#26333f,#161e26); border:1px solid #0d1218;}
+  .atom-switch{display:flex; gap:6px; margin-bottom:12px;}
+  .atom-switch button{flex:1; font:inherit; font-weight:800; font-size:12.5px; border:1.5px solid var(--line); background:#FCF7EC; color:var(--ink-soft); padding:8px; border-radius:10px; cursor:pointer;}
+  .atom-switch button.on{background:#fff; color:var(--ink); border-color:var(--oxid);}
+  .atom-cap{font-size:13.5px; line-height:1.55; color:var(--ink-soft);} .atom-cap b{color:var(--ink);}
+  .legend{display:flex; gap:14px; margin:10px 0 4px; flex-wrap:wrap;}
+  .legend span{display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--ink-soft);}
+  .legend .sw{width:15px;height:15px;border-radius:50%;}
+  .concl{display:flex; flex-direction:column; gap:11px;}
+  .concl .c{display:flex; gap:11px; align-items:flex-start; padding:12px 13px; border-radius:13px; border:1px solid var(--line);}
+  .concl .c.ox{background:#FCEEE1;} .concl .c.re{background:#E7F1FA;}
+  .concl .c .em{flex:0 0 auto; width:34px;height:34px;border-radius:10px; display:grid; place-items:center; font-size:18px; color:#fff;}
+  .concl .c.ox .em{background:var(--oxid);} .concl .c.re .em{background:var(--reduc);}
+  .concl .c .t{font-size:14px; line-height:1.5;}
+  .concl .key{margin-top:4px; text-align:center; font-size:15px; font-weight:800; padding:13px; border-radius:13px; background:linear-gradient(135deg,#FCEEE1,#E7F1FA); border:1px solid var(--line);}
+  .concl .key b{color:var(--oxid-deep);} .concl .key .re{color:var(--reduc-deep);}
+  .next-hook{margin-top:14px; font-size:13px; color:var(--ink-soft); text-align:center; line-height:1.55;}
+  .btn-primary{display:block; width:100%; margin-top:14px; font:inherit; font-weight:800; font-size:15px; border:0; cursor:pointer; padding:14px; border-radius:13px; color:#fff; background:linear-gradient(135deg,var(--oxid),var(--oxid-deep)); box-shadow:0 10px 22px -10px rgba(199,93,60,.7);}
+  .btn-primary:active{transform:scale(.99);}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001s!important; transition-duration:.05s!important;}}
+
+  /* ───────── 통합: 상단 내비 + 기록 + 대시보드 ───────── */
+  .rc-appbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    max-width:1080px;margin:0 auto;padding:10px 20px;background:rgba(255,250,239,.92);backdrop-filter:blur(8px);}
+  .rc-apptabs{display:flex;gap:6px;background:#F1E6D2;padding:5px;border-radius:14px;border:1px solid #E7DCC8;}
+  .rc-apptabs button{font:inherit;font-weight:800;font-size:13.5px;border:0;cursor:pointer;padding:9px 15px;border-radius:10px;color:#6E6356;background:transparent;}
+  .rc-apptabs button.on{background:#fff;color:#2B2620;box-shadow:0 2px 0 rgba(0,0,0,.04);}
+  .rc-apptabs button.locked{opacity:.55;}
+  .rc-apptabs button.pulse{color:#C75D3C;animation:rcpulse 1.3s ease-in-out infinite;}
+  @keyframes rcpulse{0%,100%{box-shadow:0 0 0 0 rgba(199,93,60,0);}50%{box-shadow:0 0 0 5px rgba(199,93,60,.28);}}
+  .rc-mode{font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;}
+  .rc-mode.live{background:#E9F1EB;color:#2E6B4F;border:1px solid #BFE0CC;}
+  .rc-mode.demo{background:#FBEFD8;color:#D98A2B;border:1px solid #F0D49A;}
+  .rc-view{display:none;} .rc-view.on{display:block;}
+  .rc-inner{max-width:820px;margin:0 auto;padding:4px 18px 60px;}
+  .rc-banner{font-size:12.5px;line-height:1.5;background:#FBEFD8;border:1px solid #F0D49A;color:#8a5a16;padding:10px 13px;border-radius:12px;margin:8px 0 14px;}
+  .rc-banner.hide{display:none;}
+  .rc-join{background:#fff;border:1px solid #E7DCC8;border-radius:16px;padding:12px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1.2fr 1fr auto;gap:8px;align-items:end;}
+  @media(max-width:600px){.rc-join{grid-template-columns:1fr 1fr;}}
+  .rc-fld{display:flex;flex-direction:column;gap:3px;}
+  .rc-fld label{font-size:10.5px;font-weight:800;color:#6E6356;letter-spacing:.04em;}
+  .rc-fld input{font:inherit;font-size:15px;padding:9px 11px;border:1.5px solid #E7DCC8;border-radius:10px;background:#FCF7EC;color:#2B2620;}
+  .rc-fld input:focus{outline:none;border-color:#C75D3C;}
+  .rc-btn{font:inherit;font-weight:800;border:0;cursor:pointer;border-radius:11px;padding:11px 16px;color:#fff;background:linear-gradient(135deg,#C75D3C,#9E3D27);box-shadow:0 7px 16px -8px rgba(199,93,60,.7);}
+  .rc-btn:active{transform:scale(.98);} .rc-btn.green{background:linear-gradient(135deg,#2E6B4F,#245840);}
+  .rc-joined{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#6E6356;background:#fff;border:1px solid #E7DCC8;border-radius:12px;padding:9px 13px;margin-bottom:14px;}
+  .rc-joined b{color:#C75D3C;} .rc-joined .chg{margin-left:auto;font-size:11.5px;color:#6E6356;background:none;border:0;text-decoration:underline;cursor:pointer;font-weight:700;}
+  .rc-q{background:#fff;border:1px solid #E7DCC8;border-radius:16px;padding:14px 15px;margin-bottom:11px;box-shadow:0 8px 20px -20px rgba(80,60,30,.5);}
+  .rc-q .qt{font-size:15px;font-weight:800;line-height:1.4;margin-bottom:10px;}
+  .rc-q .qt .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#FBF3E4;color:#C75D3C;font-size:13px;font-weight:900;margin-right:7px;vertical-align:middle;}
+  .rc-opts{display:flex;flex-direction:column;gap:7px;}
+  .rc-opt{font:inherit;text-align:left;font-size:14.5px;padding:11px 13px;border:1.5px solid #E7DCC8;border-radius:11px;background:#FCF7EC;cursor:pointer;color:#2B2620;transition:.12s;}
+  .rc-opt:active{transform:scale(.99);}
+  .rc-opt.sel{border-color:#C75D3C;background:#FBEADF;font-weight:800;box-shadow:0 0 0 3px rgba(199,93,60,.14);}
+  .rc-q textarea{font:inherit;width:100%;min-height:72px;resize:vertical;font-size:14.5px;padding:11px;border:1.5px solid #E7DCC8;border-radius:11px;background:#FCF7EC;color:#2B2620;}
+  .rc-q textarea:focus{outline:none;border-color:#C75D3C;}
+  .rc-submitRow{margin-top:4px;} .rc-submitRow .rc-btn{width:100%;padding:14px;font-size:15.5px;}
+  .rc-done{display:none;text-align:center;background:#E9F1EB;border:1px solid #BFE0CC;color:#2E6B4F;font-weight:800;padding:12px;border-radius:12px;margin-bottom:12px;}
+  .rc-done.show{display:block;}
+  .rc-stat{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px;}
+  .rc-pill{background:#fff;border:1px solid #E7DCC8;border-radius:12px;padding:8px 13px;font-size:13px;font-weight:700;color:#6E6356;}
+  .rc-pill b{color:#C75D3C;font-size:17px;}
+  .rc-dcard{background:#fff;border:1px solid #E7DCC8;border-radius:16px;padding:14px 15px;margin-bottom:11px;}
+  .rc-dcard h3{margin:0 0 11px;font-size:14px;line-height:1.4;}
+  .rc-bar{margin-bottom:9px;}
+  .rc-bar .bl{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;}
+  .rc-bar .bl .lab{font-weight:700;} .rc-bar .bl .okk{color:#2E6B4F;font-weight:800;font-size:11px;margin-left:6px;}
+  .rc-bar .bl .cnt{color:#6E6356;font-weight:700;font-size:12px;}
+  .rc-track{height:18px;background:#F1E8D6;border-radius:9px;overflow:hidden;}
+  .rc-fill{height:100%;border-radius:9px;background:linear-gradient(90deg,#E8A971,#C75D3C);transition:width .5s;}
+  .rc-fill.okk{background:linear-gradient(90deg,#5FAE84,#2E6B4F);}
+  .rc-wowwrap{display:flex;flex-direction:column;gap:9px;}
+  .rc-wow{background:#FFF7E8;border:1px solid #E7DCC8;border-left:5px solid #D98A2B;border-radius:10px;padding:10px 12px;}
+  .rc-wow .nm{font-size:11.5px;font-weight:800;color:#9E3D27;margin-bottom:3px;}
+  .rc-wow .tx{font-size:14px;line-height:1.45;}
+  .rc-empty{color:#6E6356;font-size:13.5px;text-align:center;padding:14px;}
+  .rc-roster{display:flex;flex-wrap:wrap;gap:6px;}
+  .rc-who{font-size:12px;font-weight:700;background:#FBF3E4;border:1px solid #E7DCC8;border-radius:999px;padding:5px 11px;}
+  .rc-who.me{background:#FBEADF;border-color:#C75D3C;color:#9E3D27;}
+  .rc-ftools{margin-top:18px;text-align:center;}
+  .rc-ftools button{font:inherit;font-size:11.5px;color:#6E6356;background:none;border:0;text-decoration:underline;cursor:pointer;}
+  .rc-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(18px);background:#2B2620;color:#fff;font-weight:700;font-size:13.5px;padding:11px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:120;}
+  .rc-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="rc-appbar">
+  <div class="rc-apptabs">
+    <button data-view="sim" class="on">🧪 실험</button>
+    <button data-view="rec">✍️ 기록</button>
+    <button data-view="dash" class="locked">🔒 대시보드</button>
+  </div>
+  <span class="rc-mode demo" id="rc-modeTag">데모 모드</span>
+</div>
+
+<section class="rc-view on" id="view-sim">
+
+<header>
+  <div class="brand"><span class="eyebrow">중2 영재 · 산화와 환원</span><h1>산화·환원 가상 실험실</h1></div>
+  <div class="stage-tabs" id="tabs">
+    <button data-stage="0" class="active"><span class="dot">1</span>구리의 산화</button>
+    <button data-stage="1"><span class="dot">2</span>산화구리의 환원</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage-wrap" id="stageWrap">
+    <div class="scene-hint" id="sceneHint">아래 선반에서 빛나는 약품·도구를 끌어다 놓아 보세요</div>
+    <button class="atom-btn" id="atomBtn">🔬 원자로 보기</button>
+    <svg class="scene" viewBox="0 0 820 460" id="scene" aria-label="실험대">
+      <rect x="0" y="392" width="820" height="68" fill="#D9C7A6"/>
+      <rect x="0" y="392" width="820" height="8" fill="#C2AC83"/>
+
+      <!-- 스탠드 + 집게 -->
+      <g id="stand">
+        <rect x="104" y="86" width="13" height="314" rx="4" fill="#7E8893"/>
+        <rect x="52" y="386" width="150" height="16" rx="6" fill="#6A737E"/>
+        <rect x="117" y="214" width="70" height="10" rx="5" fill="#8A949F"/>
+        <path d="M187 206 q22 13 0 26" fill="none" stroke="#6A737E" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="110" cy="219" r="9" fill="#5E6770"/>
+      </g>
+
+      <!-- 알코올램프 (처음엔 꺼짐), 시험관 가운데 아래 -->
+      <g id="lamp" transform="translate(245,285)">
+        <ellipse cx="40" cy="104" rx="46" ry="9" fill="rgba(0,0,0,.12)"/>
+        <path d="M10 60 Q10 50 22 48 L58 48 Q70 50 70 60 L74 100 Q74 108 64 108 L16 108 Q6 108 6 100 Z" fill="#CFE3F2" stroke="#9DBBD2" stroke-width="2"/>
+        <rect x="30" y="30" width="20" height="22" rx="3" fill="#B9D2E6" stroke="#9DBBD2" stroke-width="2"/>
+        <rect x="34" y="20" width="12" height="14" rx="3" fill="#8C9AA6"/>
+        <rect id="wick" x="38" y="14" width="4" height="9" rx="2" fill="#7a5a3a"/>
+        <g id="flame" style="opacity:0;">
+          <ellipse cx="40" cy="-2" rx="15" ry="30" fill="#FF6A00"/>
+          <ellipse cx="40" cy="2" rx="9.5" ry="22" fill="#FFB02E"/>
+          <ellipse cx="40" cy="8" rx="5" ry="13" fill="#4A90D9"/>
+          <ellipse cx="40" cy="2" rx="3.5" ry="10" fill="#FFF1B8"/>
+        </g>
+      </g>
+
+      <!-- 시험관 : 왼쪽 둥글게 막힘, 오른쪽 입구 열림 -->
+      <g id="tube" transform="translate(150,208) rotate(-4)">
+        <!-- 유리 벽 (오른쪽은 열려 있음) -->
+        <path d="M300 -22 L18 -22 Q-4 -22 -4 0 Q-4 22 18 22 L300 22"
+              fill="rgba(214,233,244,.45)" stroke="#A9C7DC" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- 열린 입구(림) -->
+        <ellipse cx="300" cy="0" rx="6.5" ry="22" fill="rgba(120,150,175,.30)" stroke="#A9C7DC" stroke-width="3"/>
+        <!-- 가루 더미 -->
+        <rect id="powder" x="80" y="4" width="120" height="13" rx="6" fill="#C8702D" opacity="0"/>
+        <g id="sparkleHost"></g>
+      </g>
+
+      <!-- 고무마개 + 유리관 (2단계, 드래그로 등장) : 시험관 입구(오른쪽)에 꽂힘 -->
+      <g id="delivery" style="opacity:0;">
+        <g transform="translate(449,184) rotate(-4)"><rect x="-4" y="-15" width="22" height="30" rx="6" fill="#6B4F3A"/></g>
+        <path d="M470 182 Q524 182 560 246 L600 330" fill="none" stroke="#A9C7DC" stroke-width="6" stroke-linecap="round"/>
+        <g id="gasHost"></g>
+      </g>
+
+      <!-- 석회수 비커 (2단계, 드래그로 등장) -->
+      <g id="lime" transform="translate(548,300)" style="opacity:0;">
+        <path d="M0 0 L8 96 Q9 108 22 108 L86 108 Q99 108 100 96 L108 0" fill="rgba(255,255,255,.32)" stroke="#BBC9C0" stroke-width="3"/>
+        <clipPath id="limeClip"><path d="M6 6 L13 96 Q14 102 22 102 L86 102 Q94 102 95 96 L102 6 Z"/></clipPath>
+        <g clip-path="url(#limeClip)">
+          <rect id="limeWater" x="0" y="34" width="120" height="80" fill="#EAF1ED"/>
+          <rect id="limeCloud" x="0" y="34" width="120" height="80" fill="#FBFCFB" opacity="0"/>
+          <g id="bubbleHost"></g><g id="motesHost"></g>
+        </g>
+        <text x="54" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#7E8C82">석회수</text>
+      </g>
+
+      <!-- 약숟가락 (붓는 순간만 보임) -->
+      <g id="spoon" style="opacity:0;">
+        <g id="spoonInner">
+          <rect x="-2" y="-3" width="46" height="6" rx="3" transform="rotate(28)" fill="#9AA6B0"/>
+          <ellipse cx="-6" cy="-12" rx="13" ry="8" transform="rotate(28 -6 -12)" fill="#C2CDD6" stroke="#9AA6B0" stroke-width="1.5"/>
+          <ellipse id="spoonLoad" cx="-6" cy="-13" rx="9" ry="5" transform="rotate(28 -6 -13)" fill="#C8702D" opacity="0"/>
+        </g>
+      </g>
+
+      <!-- 성냥 (불 붙이는 순간만 보임) -->
+      <g id="matchG" style="opacity:0;">
+        <rect x="-3" y="0" width="6" height="40" rx="3" fill="#C8A06A"/>
+        <circle cx="0" cy="-2" r="7" fill="#E0843B"/>
+        <circle cx="-1" cy="-3" r="3.4" fill="#FFD36B"/>
+        <ellipse id="matchFlame" cx="0" cy="-10" rx="6" ry="12" fill="#FF7A00" opacity="0"/>
+      </g>
+
+      <g id="heatHost"></g>
+
+      <rect id="dzTube"    class="dz" x="200" y="158" width="240" height="82"/>
+      <rect id="dzLamp"    class="dz" x="245" y="282" width="92"  height="80"/>
+      <rect id="dzStopper" class="dz" x="408" y="156" width="96"  height="70"/>
+      <rect id="dzLime"    class="dz" x="540" y="298" width="140" height="118"/>
+    </svg>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <div class="guide">
+        <div class="face" id="face">🧪</div>
+        <div class="bubble">
+          <div class="step-no" id="stepNo">준비</div>
+          <p class="say" id="sayText">실험을 시작해 볼까요?</p>
+          <p class="sub" id="subText">선반에서 <b>빛나는 약품·도구</b>를 끌어다 시험관·램프에 놓아요.</p>
+        </div>
+      </div>
+      <div class="progress" id="progress"></div>
+      <button class="nextbtn" id="nextBtn"></button>
+      <div class="eq-card" id="eqCard"><div class="lab">반응식</div><div class="eq" id="eqText"></div></div>
+    </div>
+    <div class="panel log"><h3>📋 관찰 기록</h3>
+      <ul id="logList"><li style="opacity:.6; background:#fff; border-style:dashed; animation:none;">아직 기록이 없어요. 실험을 진행해 보세요.</li></ul>
+    </div>
+  </aside>
+
+  <section class="shelf">
+    <div class="lab">약품 · 도구 (끌어다 놓기)</div>
+    <div class="chips" id="chips">
+      <button class="chip" data-drag="copper"><svg viewBox="0 0 40 40"><rect x="9" y="6" width="22" height="9" rx="2" fill="#C9D6DF"/><path d="M11 15 h18 l-2 18 a3 3 0 0 1-3 3 h-8 a3 3 0 0 1-3-3 Z" fill="rgba(180,205,222,.5)" stroke="#A9C7DC" stroke-width="1.5"/><path d="M13 27 h14 l-1 6 a2 2 0 0 1-2 2 h-8 a2 2 0 0 1-2-2 Z" fill="#C8702D"/></svg>구리 가루<span class="grip">⠿</span></button>
+      <button class="chip" data-drag="carbon"><svg viewBox="0 0 40 40"><rect x="9" y="6" width="22" height="9" rx="2" fill="#C9D6DF"/><path d="M11 15 h18 l-2 18 a3 3 0 0 1-3 3 h-8 a3 3 0 0 1-3-3 Z" fill="rgba(180,205,222,.5)" stroke="#A9C7DC" stroke-width="1.5"/><path d="M13 27 h14 l-1 6 a2 2 0 0 1-2 2 h-8 a2 2 0 0 1-2-2 Z" fill="#2E2A28"/></svg>탄소 가루<span class="grip">⠿</span></button>
+      <button class="chip" data-drag="stopper"><svg viewBox="0 0 40 40"><path d="M14 9 h12 l-2 19 a4 4 0 0 1-8 0 Z" fill="#6B4F3A"/><path d="M24 11 q9 0 9 9 v8" fill="none" stroke="#A9C7DC" stroke-width="3.4" stroke-linecap="round"/></svg>고무마개+유리관<span class="grip">⠿</span></button>
+      <button class="chip" data-drag="lime"><svg viewBox="0 0 40 40"><path d="M11 9 l2 22 a3 3 0 0 0 3 3 h8 a3 3 0 0 0 3-3 l2-22" fill="rgba(190,201,192,.4)" stroke="#BBC9C0" stroke-width="1.6"/><path d="M12.5 20 l1.4 11 a2 2 0 0 0 2 2 h8.2 a2 2 0 0 0 2-2 l1.4-11 Z" fill="#EAF1ED"/></svg>석회수<span class="grip">⠿</span></button>
+      <button class="chip" data-drag="match"><svg viewBox="0 0 40 40"><rect x="18" y="12" width="5" height="22" rx="2.5" transform="rotate(18 20 22)" fill="#C8A06A"/><circle cx="14" cy="13" r="5.4" fill="#E0843B"/><circle cx="12.6" cy="11.6" r="2.6" fill="#FFD36B"/></svg>성냥<span class="grip">⠿</span></button>
+      <button class="reset" id="resetBtn">↺ 처음부터</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+
+</section>
+
+<section class="rc-view" id="view-rec"><div class="rc-inner">
+  <div class="rc-banner" id="rc-banner"></div>
+  <div class="rc-join" id="rc-joinbar">
+    <div class="rc-fld"><label>방 코드</label><input id="rc-room" value="1반" autocomplete="off"></div>
+    <div class="rc-fld"><label>이름(닉네임)</label><input id="rc-name" placeholder="예: 김민준" autocomplete="off"></div>
+    <div class="rc-fld"><label>모둠</label><input id="rc-group" placeholder="예: 3모둠" autocomplete="off"></div>
+    <button class="rc-btn" id="rc-join">입장</button>
+  </div>
+  <div class="rc-joined" id="rc-joined" style="display:none"><span id="rc-whoami"></span><button class="chg" id="rc-change">바꾸기</button></div>
+  <div class="rc-done" id="rc-done">✅ 기록 완료! ‘대시보드’에서 친구들과 비교해 보세요. (다시 제출하면 내 기록이 갱신돼요)</div>
+  <div id="rc-qHost"></div>
+  <div class="rc-submitRow"><button class="rc-btn green" id="rc-submit">기록 제출하기</button></div>
+</div></section>
+
+<section class="rc-view" id="view-dash"><div class="rc-inner">
+  <div class="rc-stat"><div class="rc-pill">참여 <b id="rc-cnt">0</b> 명</div><div class="rc-pill">방 <b id="rc-roomtag" style="font-size:14px">-</b></div></div>
+  <div class="rc-dcard" id="rc-rostercard" style="display:none"><h3>📝 기록한 친구들</h3><div class="rc-roster" id="rc-roster"></div></div>
+  <div id="rc-distHost"></div>
+  <div class="rc-dcard"><h3>💡 가장 신기했던 점 모음</h3><div class="rc-wowwrap" id="rc-wowHost"><div class="rc-empty">아직 기록이 없어요.</div></div></div>
+  <div class="rc-ftools"><button id="rc-clear">⚠ 이 방의 모든 기록 지우기 (교사용)</button></div>
+</div></section>
+
+<div class="rc-toast" id="rc-toast"></div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s);
+const NS="http://www.w3.org/2000/svg";
+const scene=$("#scene"), stageWrap=$("#stageWrap"), sceneHint=$("#sceneHint");
+const flame=$("#flame"), powder=$("#powder"), delivery=$("#delivery"), limeG=$("#lime");
+const limeWater=$("#limeWater"), limeCloud=$("#limeCloud"), bubbleHost=$("#bubbleHost"), motesHost=$("#motesHost");
+const gasHost=$("#gasHost"), heatHost=$("#heatHost"), sparkleHost=$("#sparkleHost");
+const spoon=$("#spoon"), spoonInner=$("#spoonInner"), spoonLoad=$("#spoonLoad"), matchG=$("#matchG"), matchFlame=$("#matchFlame");
+const stepNo=$("#stepNo"), sayText=$("#sayText"), subText=$("#subText"), face=$("#face");
+const eqCard=$("#eqCard"), eqText=$("#eqText"), progressEl=$("#progress"), nextBtn=$("#nextBtn");
+const logList=$("#logList"), toast=$("#toast"), atomBtn=$("#atomBtn"), modal=$("#modal"), sheet=$("#sheet"), tabs=$("#tabs");
+const chips=[...document.querySelectorAll(".chip")];
+
+let lampLit=false, logCleared=false, busy=false, powderAnim=null;
+const COL={copper:"#C8702D", carbon:"#2E2A28", mix:"#34302C", cuo:"#231F1C", copperLite:"#E59A57"};
+function clearAnims(...els){ els.forEach(el=>{ if(el&&el.getAnimations) el.getAnimations().forEach(a=>a.cancel()); }); }
+
+/* ───────── 플로우 ───────── */
+const FLOW=[
+ { name:"구리의 산화", shelf:["copper","match"], eq:`2Cu + O<span class="sub">2</span> → 2CuO`,
+   steps:[
+     {need:"copper", target:"dzTube", face:"🥄", say:"구리 가루를 시험관에 넣어요.", sub:"‘구리 가루’를 시험관 위로 끌어다 놓으세요. 약숟가락으로 떠 담습니다.", run:()=>pour("copper")},
+     {need:"match", target:"dzLamp", face:"🔥", say:"성냥으로 알코올램프에 불을 붙여요!", sub:"‘성냥’을 램프 심지로 끌어다 놓으면 불이 붙고, 시험관이 가열돼요.", run:()=>lightThen("oxidize")},
+   ],
+   done:{no:"1단계 완료", face:"✨", say:"붉은 구리가 검은 산화구리로 변했어요!", sub:"구리가 공기 중 산소와 결합했어요. 산소를 얻는 반응 = 산화.", nextLabel:"② 산화구리의 환원으로 →", nextGo:()=>gotoStage(1)} },
+ { name:"산화구리의 환원", shelf:["carbon","stopper","lime","match"], eq:`2CuO + C → 2Cu + CO<span class="sub">2</span>`,
+   steps:[
+     {need:"carbon", target:"dzTube", face:"🥄", say:"탄소 가루를 더 넣어 섞어요.", sub:"‘탄소 가루’를 시험관으로 끌어다 놓으세요. 가루 양이 늘어납니다.", run:()=>pour("carbon")},
+     {need:"stopper", target:"dzStopper", face:"🧪", say:"열린 입구에 고무마개+유리관을 끼워요.", sub:"‘고무마개+유리관’을 시험관 입구(오른쪽)로 끌어다 놓으세요.", run:()=>attachStopper()},
+     {need:"lime", target:"dzLime", face:"🧪", say:"유리관 끝을 석회수에 담가요.", sub:"‘석회수’를 유리관 끝 아래로 끌어다 놓으세요.", run:()=>placeLime()},
+     {need:"match", target:"dzLamp", face:"🔥", say:"혼합물을 가열해요!", sub:"‘성냥’을 램프로 끌어다 불을 붙이세요. 가루와 석회수를 함께 보세요.", run:()=>lightThen("reduce")},
+   ],
+   done:{no:"2단계 완료", face:"🎉", say:"검은 가루가 다시 붉은 구리로! 석회수는 뿌옇게!", sub:"산화구리는 산소를 잃어 환원, 탄소는 산소를 얻어 이산화탄소가 됐어요.", nextLabel:"🎓 오늘의 결론 보기", nextGo:openConclusion, concl:true} }
+];
+let cur=0, idx=0;
+const step=()=>FLOW[cur].steps[idx];
+
+function renderShelf(){ const need=FLOW[cur].shelf; chips.forEach(c=>{ const on=need.includes(c.dataset.drag); c.classList.toggle("disabled",!on); c.classList.remove("glow"); }); }
+function renderProgress(){ progressEl.innerHTML=""; FLOW[cur].steps.forEach((s,i)=>{ const b=document.createElement("i"); if(i<idx)b.classList.add("done"); else if(i===idx)b.classList.add("on"); progressEl.appendChild(b); }); }
+function showStep(){
+  nextBtn.classList.remove("show");
+  if(idx>=FLOW[cur].steps.length){ finishStage(); return; }
+  const s=step();
+  stepNo.textContent=`STEP ${cur+1}-${idx+1}`; sayText.textContent=s.say; subText.innerHTML=s.sub; face.textContent=s.face;
+  renderProgress();
+  chips.forEach(c=>c.classList.toggle("glow", c.dataset.drag===s.need && !c.classList.contains("disabled")));
+  sceneHint.textContent=hintFor(s);
+}
+function hintFor(s){ return s.target==="dzTube"?"약품을 시험관으로 끌어다 놓아요":s.target==="dzLamp"?"성냥을 알코올램프로 끌어다 놓아요":
+  s.target==="dzStopper"?"고무마개를 시험관 입구로 끌어다 놓아요":s.target==="dzLime"?"석회수를 유리관 끝 아래로 끌어다 놓아요":"끌어다 놓아요"; }
+function advance(){ idx++; showStep(); }
+
+/* ───────── 드래그 ───────── */
+let drag=null;
+function chipDown(e){
+  const chip=e.currentTarget;
+  if(busy || chip.classList.contains("disabled")) return;
+  e.preventDefault();
+  const ghost=document.createElement("div"); ghost.className="ghost";
+  ghost.innerHTML=`<svg viewBox="0 0 40 40">${chip.querySelector("svg").innerHTML}</svg>`;
+  document.body.appendChild(ghost);
+  drag={item:chip.dataset.drag, ghost, chip}; posGhost(e);
+  const s=step(); if(s && drag.item===s.need) document.getElementById(s.target).classList.add("hot");
+  window.addEventListener("pointermove", dragMove);
+  window.addEventListener("pointerup", dragUp, {once:true});
+}
+function posGhost(e){ drag.ghost.style.left=e.clientX+"px"; drag.ghost.style.top=e.clientY+"px"; }
+function dragMove(e){ if(drag) posGhost(e); }
+function dragUp(e){
+  window.removeEventListener("pointermove", dragMove);
+  if(!drag) return;
+  const s=step(); const ok = s && drag.item===s.need && overTarget(e, s.target);
+  drag.ghost.remove(); clearHot();
+  const item=drag.item, chip=drag.chip; drag=null;
+  if(ok){ s.run(); } // 각 run이 애니메이션 끝에 스스로 advance
+  else { chip.classList.add("shake"); setTimeout(()=>chip.classList.remove("shake"),420); showToast(missHint(item,s)); }
+}
+function overTarget(e, dzId){ const r=document.getElementById(dzId).getBoundingClientRect(); const p=14;
+  return e.clientX>=r.left-p && e.clientX<=r.right+p && e.clientY>=r.top-p && e.clientY<=r.bottom+p; }
+function clearHot(){ document.querySelectorAll(".dz.hot").forEach(d=>d.classList.remove("hot")); }
+function missHint(item,s){ if(s && item!==s.need) return "지금은 다른 걸 써야 해요. 빛나는 것을 끌어요";
+  if(s && s.target==="dzTube") return "시험관 위에 정확히 놓아요"; if(s && s.target==="dzLamp") return "알코올램프 위에 놓아요";
+  if(s && s.target==="dzStopper") return "시험관 입구(오른쪽)에 놓아요"; if(s && s.target==="dzLime") return "유리관 끝 아래(석회수 자리)에 놓아요"; return "목표 위치에 놓아요"; }
+chips.forEach(c=>c.addEventListener("pointerdown", chipDown));
+
+/* ───────── 붓기 (약숟가락) ───────── */
+function pour(kind){
+  busy=true; clearAnims(spoon, spoonInner, spoonLoad);
+  const isCarbon=kind==="carbon";
+  spoonLoad.setAttribute("fill", isCarbon?COL.carbon:COL.copper);
+  spoon.style.opacity="1";
+  const a1=spoon.animate([{transform:"translate(470px,150px)"},{transform:"translate(398px,176px)"}],{duration:600,easing:"ease-out",fill:"forwards"});
+  spoonLoad.animate([{opacity:0},{opacity:1}],{duration:200,fill:"forwards"});
+  a1.onfinish=()=>{
+    const tip=spoonInner.animate([{transform:"rotate(0deg)"},{transform:"rotate(120deg)"}],{duration:450,easing:"ease-in",fill:"forwards"});
+    setTimeout(()=>fallPowder(isCarbon), 230);
+    tip.onfinish=()=>{
+      spoonLoad.style.opacity="0";
+      setTimeout(()=>{
+        spoonInner.animate([{transform:"rotate(120deg)"},{transform:"rotate(0deg)"}],{duration:250,fill:"forwards"});
+        spoon.animate([{opacity:1},{opacity:0}],{duration:400,fill:"forwards"});
+        growPowder(isCarbon);
+        addLog("⚗️", isCarbon?"탄소 가루를 넣어 섞었어요. 가루 양이 늘고 회흑색이 됐어요.":"시험관에 붉은 구리 가루를 넣었어요.");
+        setTimeout(()=>{ busy=false; advance(); }, 500);
+      }, 200);
+    };
+  };
+}
+function fallPowder(isCarbon){
+  const col=isCarbon?COL.carbon:COL.copper;
+  for(let i=0;i<10;i++){ const c=document.createElementNS(NS,"circle");
+    const x=95+Math.random()*110; c.setAttribute("cx",x); c.setAttribute("cy",-30); c.setAttribute("r",1.6+Math.random()*1.8); c.setAttribute("fill",col);
+    powder.parentNode.insertBefore(c,powder);
+    const dy=34+Math.random()*8;
+    c.animate([{transform:"translateY(0)",opacity:1},{transform:`translateY(${dy}px)`,opacity:0}],{duration:380+Math.random()*200,easing:"ease-in"}).onfinish=()=>c.remove();
+  }
+}
+function growPowder(isCarbon){
+  powder.style.opacity="1";
+  if(isCarbon){ powder.setAttribute("x",62); powder.setAttribute("y",-3); powder.setAttribute("width",156); powder.setAttribute("height",20); powder.setAttribute("fill",COL.mix); }
+  else { powder.setAttribute("x",80); powder.setAttribute("y",4); powder.setAttribute("width",120); powder.setAttribute("height",13); powder.setAttribute("fill",COL.copper); }
+  powder.animate([{transform:"scaleY(.5)"},{transform:"scaleY(1)"}],{duration:350,easing:"ease-out"});
+}
+
+function attachStopper(){
+  busy=true;
+  delivery.style.transition="none"; delivery.style.opacity="1";
+  delivery.animate([{opacity:0},{opacity:1}],{duration:450,fill:"forwards"});
+  addLog("🧪","열린 입구에 고무마개+유리관을 끼웠어요. 기체가 유리관으로 빠져나가요.");
+  setTimeout(()=>{ busy=false; advance(); }, 600);
+}
+function placeLime(){
+  busy=true;
+  limeG.style.transition="none"; limeG.style.opacity="1";
+  limeG.animate([{transform:"translate(548px,326px)",opacity:0},{transform:"translate(548px,300px)",opacity:1}],{duration:500,easing:"ease-out",fill:"forwards"});
+  addLog("🧪","유리관 끝을 석회수에 담갔어요. 기체가 통과하면 변화가 보여요.");
+  setTimeout(()=>{ busy=false; advance(); }, 650);
+}
+
+/* ───────── 성냥 점화 → 가열 ───────── */
+function lightThen(kind){
+  busy=true; clearAnims(matchG, matchFlame);
+  matchG.style.opacity="1";
+  const ma=matchG.animate([{transform:"translate(360px,250px) rotate(20deg)"},{transform:"translate(286px,288px) rotate(20deg)"}],{duration:600,easing:"ease-out",fill:"forwards"});
+  matchFlame.animate([{opacity:0},{opacity:1}],{duration:300,delay:150,fill:"forwards"});
+  ma.onfinish=()=>{
+    igniteLamp(); addLog("🔥","알코올램프에 불을 붙였어요.");
+    setTimeout(()=>{
+      matchG.animate([{transform:"translate(286px,288px) rotate(20deg)",opacity:1},{transform:"translate(360px,250px) rotate(20deg)",opacity:0}],{duration:450,fill:"forwards"});
+      setTimeout(()=>heat(kind), 350);
+    }, 420);
+  };
+}
+function igniteLamp(){
+  if(lampLit) return; lampLit=true; clearAnims(flame);
+  flame.style.opacity="1";
+  flame.animate([{opacity:0,transform:"scaleY(.2)"},{opacity:1,transform:"scaleY(1)"}],{duration:400,fill:"forwards"});
+  flame.style.animation="flicker .22s ease-in-out infinite alternate";
+  if(!$("#flk")){ const fs=document.createElement("style"); fs.id="flk"; fs.textContent="@keyframes flicker{from{transform:scaleY(.93) scaleX(1.05);}to{transform:scaleY(1.07) scaleX(.95);}}"; document.head.appendChild(fs); }
+}
+function extinguish(){ clearAnims(flame); flame.style.animation=""; flame.style.opacity="0"; lampLit=false; }
+
+function heat(kind){
+  stageWrap.classList.add("dim"); sceneHint.textContent="가열 중… 색 변화를 잘 보세요";
+  const ht=spawnHeat(); const dur=4200;
+  if(kind==="oxidize"){
+    powderColor(COL.copper, COL.cuo, dur);
+    setTimeout(()=>addLog("👀","붉은빛이 점점 사라지고 검게 변하기 시작해요!"),1500);
+    setTimeout(()=>{ finishHeat(ht); addLog("⬛","구리가 완전히 검은 산화구리(CuO)로 변했어요."); revealEq(); atomBtn.classList.add("ready"); afterHeat(); }, dur+300);
+  } else {
+    powderColor(COL.mix, COL.copperLite, dur);
+    const gb=startGas();
+    setTimeout(()=>addLog("👀","검은 가루 속에서 붉은 알갱이가 반짝이며 나타나요!"),1600);
+    setTimeout(()=>cloudLime(),1700);
+    setTimeout(()=>addLog("☁️","석회수가 뿌옇게 흐려졌어요 → 이산화탄소(CO₂) 발생 증거!"),2700);
+    setTimeout(()=>{ finishHeat(ht); stopGas(gb); sparkleCopper(); addLog("🟧","혼합물이 다시 붉은 구리로 환원됐어요."); revealEq(); atomBtn.classList.add("ready"); afterHeat(); }, dur+300);
+  }
+}
+function afterHeat(){ setTimeout(()=>{ extinguish(); stageWrap.classList.remove("dim"); busy=false; advance(); }, 800); }
+function powderColor(from,to,dur){
+  if(powderAnim) powderAnim.cancel();
+  powder.setAttribute("fill",from);
+  powderAnim=powder.animate([{fill:from},{fill:to}],{duration:dur,easing:"ease-in"});
+  powderAnim.onfinish=()=>{ powder.setAttribute("fill",to); };
+  powder.animate([{filter:"drop-shadow(0 0 2px rgba(255,150,40,.2))"},{filter:"drop-shadow(0 0 11px rgba(255,120,30,.9))"},{filter:"drop-shadow(0 0 3px rgba(255,150,40,.2))"}],{duration:1100, iterations:Math.ceil(dur/1100)});
+}
+function spawnHeat(){ return setInterval(()=>{ for(let i=0;i<2;i++){ const c=document.createElementNS(NS,"circle");
+  const x=258+Math.random()*70; c.setAttribute("cx",x); c.setAttribute("cy",268); c.setAttribute("r",2+Math.random()*2.5); c.setAttribute("fill","rgba(255,170,60,.55)"); heatHost.appendChild(c);
+  c.animate([{transform:"translateY(0)",opacity:.7},{transform:"translateY(-56px)",opacity:0}],{duration:1400}).onfinish=()=>c.remove(); } },180); }
+function finishHeat(t){ clearInterval(t); }
+function startGas(){
+  const g1=setInterval(()=>{ const c=document.createElementNS(NS,"circle"); c.setAttribute("cx",600); c.setAttribute("cy",250); c.setAttribute("r",2.4); c.setAttribute("fill","rgba(255,255,255,.7)"); gasHost.appendChild(c);
+    c.animate([{transform:"translateY(0)",opacity:.2},{transform:"translateY(80px)",opacity:.9}],{duration:900}).onfinish=()=>c.remove(); },240);
+  const g2=setInterval(()=>{ const c=document.createElementNS(NS,"circle"); const x=12+Math.random()*96; c.setAttribute("cx",x); c.setAttribute("cy",112); c.setAttribute("r",2+Math.random()*3);
+    c.setAttribute("fill","rgba(255,255,255,.9)"); c.setAttribute("stroke","rgba(150,170,160,.5)"); c.setAttribute("stroke-width",".6"); bubbleHost.appendChild(c);
+    c.animate([{transform:"translateY(0)",opacity:.9},{transform:"translateY(-74px)",opacity:0}],{duration:1100+Math.random()*500}).onfinish=()=>c.remove(); },150);
+  return [g1,g2];
+}
+function stopGas(a){ a.forEach(clearInterval); }
+function cloudLime(){ limeCloud.animate([{opacity:0},{opacity:.96}],{duration:2400,fill:"forwards",easing:"ease-in"});
+  for(let i=0;i<26;i++){ setTimeout(()=>{ const m=document.createElementNS(NS,"circle"); const x=8+Math.random()*104, y=40+Math.random()*70;
+    m.setAttribute("cx",x); m.setAttribute("cy",y); m.setAttribute("r",.8+Math.random()*1.4); m.setAttribute("fill","rgba(255,255,255,.9)"); motesHost.appendChild(m);
+    m.animate([{opacity:0},{opacity:1}],{duration:600,fill:"forwards"}); }, 600+i*60); } }
+function sparkleCopper(){ const bx=+powder.getAttribute("x"), by=+powder.getAttribute("y"), bw=+powder.getAttribute("width"), bh=+powder.getAttribute("height");
+  for(let i=0;i<16;i++){ setTimeout(()=>{ const s=document.createElementNS(NS,"circle"); s.setAttribute("cx",bx+Math.random()*bw); s.setAttribute("cy",by+Math.random()*bh); s.setAttribute("r",1.5); s.setAttribute("fill","#FFE0B0"); sparkleHost.appendChild(s);
+    s.animate([{opacity:0,transform:"scale(.3)"},{opacity:1,transform:"scale(1.5)"},{opacity:0,transform:"scale(.4)"}],{duration:700}).onfinish=()=>s.remove(); }, i*85); } }
+
+/* ───────── 기록/식/토스트 ───────── */
+function revealEq(){ eqCard.style.display="block"; eqText.innerHTML=FLOW[cur].eq; eqCard.animate([{opacity:0,transform:"translateY(6px)"},{opacity:1,transform:"none"}],{duration:400}); }
+function addLog(ic,t){ if(!logCleared){ logList.innerHTML=""; logCleared=true; } const li=document.createElement("li"); li.innerHTML=`<span>${ic}</span><span>${t}</span>`; logList.appendChild(li); logList.scrollTop=logList.scrollHeight; }
+function showToast(m){ toast.textContent=m; toast.classList.add("show"); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove("show"),1900); }
+
+/* ───────── 완료 ───────── */
+function finishStage(){
+  const d=FLOW[cur].done;
+  stepNo.textContent=d.no; sayText.textContent=d.say; subText.innerHTML=d.sub; face.textContent=d.face;
+  renderProgress(); progressEl.querySelectorAll("i").forEach(i=>{i.classList.remove("on");i.classList.add("done");});
+  tabs.querySelector(`[data-stage="${cur}"]`).classList.add("done");
+  chips.forEach(c=>c.classList.remove("glow"));
+  sceneHint.textContent = cur===0 ? "잘했어요! 아래 버튼으로 다음 단계로 가요" : "실험 완료! 결론을 확인하세요";
+  nextBtn.textContent=d.nextLabel; nextBtn.classList.toggle("concl", !!d.concl); nextBtn.classList.add("show"); nextBtn.onclick=d.nextGo;
+}
+
+/* ───────── 원자로 보기 (CSS transform 절대좌표로 도킹) ───────── */
+atomBtn.addEventListener("click", ()=>openAtom(cur===0?"ox":"re"));
+function openAtom(mode){
+  sheet.innerHTML=`
+    <div class="sh-head"><h2>🔬 원자 속을 들여다보면</h2><button class="x" id="mx">✕</button></div>
+    <div class="sh-body">
+      <div class="atom-switch"><button id="aOx" class="${mode==='ox'?'on':''}">① 산화 (구리+산소)</button><button id="aRe" class="${mode==='re'?'on':''}">② 환원 (산화구리+탄소)</button></div>
+      <div class="atom-stage" id="astage"></div>
+      <div class="legend"><span><i class="sw" style="background:#E0843B"></i>구리 Cu</span><span><i class="sw" style="background:#E24B4B"></i>산소 O</span><span><i class="sw" style="background:#4a4540"></i>탄소 C</span></div>
+      <p class="atom-cap" id="acap"></p>
+    </div>`;
+  $("#mx").onclick=()=>modal.classList.remove("open");
+  $("#aOx").onclick=()=>{ $("#aOx").classList.add("on"); $("#aRe").classList.remove("on"); atomAnim("ox"); };
+  $("#aRe").onclick=()=>{ $("#aRe").classList.add("on"); $("#aOx").classList.remove("on"); atomAnim("re"); };
+  modal.classList.add("open"); atomAnim(mode);
+}
+function atom(svg,x,y,r,fill,label){
+  const g=document.createElementNS(NS,"g"); g.style.transform=`translate(${x}px,${y}px)`;
+  const c=document.createElementNS(NS,"circle"); c.setAttribute("r",r); c.setAttribute("fill",fill); c.setAttribute("stroke","rgba(255,255,255,.28)"); c.setAttribute("stroke-width","1.5"); g.appendChild(c);
+  if(label){ const t=document.createElementNS(NS,"text"); t.setAttribute("text-anchor","middle"); t.setAttribute("dy","4.5"); t.setAttribute("font-size","12"); t.setAttribute("font-weight","800"); t.setAttribute("fill","#fff"); t.textContent=label; g.appendChild(t); }
+  svg.appendChild(g); return {g,x,y};
+}
+function slide(n,tx,ty,dur,delay=0){ n.g.animate([{transform:`translate(${n.x}px,${n.y}px)`},{transform:`translate(${tx}px,${ty}px)`}],{duration:dur,delay,easing:"cubic-bezier(.4,0,.3,1)",fill:"forwards"}); n.x=tx; n.y=ty; }
+function bondLine(svg,x1,y1,x2,y2){ const l=document.createElementNS(NS,"line"); l.setAttribute("x1",x1);l.setAttribute("y1",y1);l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+  l.setAttribute("stroke","rgba(255,255,255,.55)");l.setAttribute("stroke-width","3.4");l.setAttribute("stroke-linecap","round"); l.style.opacity="0"; svg.insertBefore(l, svg.firstChild);
+  l.animate([{opacity:0},{opacity:1}],{duration:350,fill:"forwards"}); return l; }
+function atomAnim(mode){
+  const stage=$("#astage"), cap=$("#acap"); stage.innerHTML="";
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox","0 0 460 240"); svg.setAttribute("width","100%"); svg.setAttribute("height","100%"); stage.appendChild(svg);
+  if(mode==="ox"){
+    cap.innerHTML="산소(O)가 구리(Cu)에게 <b>천천히 다가가</b> 달라붙어요…";
+    const cu1=atom(svg,150,140,20,"#E0843B","Cu"), cu2=atom(svg,250,140,20,"#E0843B","Cu");
+    const o1=atom(svg,385,68,13,"#E24B4B","O"), o2=atom(svg,417,68,13,"#E24B4B","O");
+    const ob=bondLine(svg,385,68,417,68);
+    setTimeout(()=>{ ob.remove(); slide(o1,183,140,1500); slide(o2,283,140,1500); },600);  // 각 구리 오른쪽에 도킹
+    setTimeout(()=>{ bondLine(svg,150,140,183,140); bondLine(svg,250,140,283,140);
+      cap.innerHTML="✨ 달라붙어 <b>CuO(산화구리)</b>가 됐어요. 구리가 산소를 <b style='color:#E0843B'>얻었으니 = 산화</b>!"; },2250);
+  } else {
+    cap.innerHTML="산화구리(CuO)의 산소가 <b>떨어져 탄소(C)로</b> 옮겨가요…";
+    const cu1=atom(svg,105,90,20,"#E0843B","Cu"), o1=atom(svg,138,90,13,"#E24B4B","O");
+    const cu2=atom(svg,105,180,20,"#E0843B","Cu"), o2=atom(svg,138,180,13,"#E24B4B","O");
+    const b1=bondLine(svg,105,90,138,90), b2=bondLine(svg,105,180,138,180);
+    const c=atom(svg,335,135,18,"#4a4540","C");
+    setTimeout(()=>{ b1.remove(); b2.remove(); slide(o1,304,135,1600); slide(o2,366,135,1600); },700); // 탄소 양옆에 도킹 → O=C=O
+    setTimeout(()=>{ bondLine(svg,335,135,304,135); bondLine(svg,335,135,366,135);
+      cap.innerHTML="✨ 탄소에 산소가 붙어 <b>CO₂</b>가 됐어요. 구리는 산소를 <b style='color:#3A86C8'>잃어 환원</b>, 탄소는 <b style='color:#E0843B'>얻어 산화</b> — <b>동시에</b>!"; },2500);
+  }
+}
+
+/* ───────── 결론 ───────── */
+function openConclusion(){
+  sheet.innerHTML=`
+    <div class="sh-head"><h2>🎓 오늘의 결론</h2><button class="x" id="mx">✕</button></div>
+    <div class="sh-body"><div class="concl">
+      <div class="c ox"><div class="em">＋</div><div class="t"><b>산화</b> = 산소를 <b>얻는</b> 반응<br><span style="color:#6E6356">구리→산화구리, 탄소→이산화탄소</span></div></div>
+      <div class="c re"><div class="em">－</div><div class="t"><b>환원</b> = 산소를 <b>잃는</b> 반응<br><span style="color:#6E6356">산화구리→구리</span></div></div>
+      <div class="key">산화와 <span class="re">환원</span>은 <b>항상 동시에</b> 일어나요<br><span style="font-weight:700;font-size:13px;color:#6E6356">한 물질이 산소를 잃으면, 다른 물질이 그 산소를 얻으니까요</span></div></div>
+      <p class="next-hook">🔎 지금은 <b>산소</b>를 기준으로 봤어요.<br>다음엔 산소가 없는 반응까지 설명하는 <b>전자</b>의 눈으로 더 깊이 봅니다!</p>
+      <button class="btn-primary" id="recBtn" style="background:linear-gradient(135deg,#2E6B4F,#245840);box-shadow:0 10px 22px -10px rgba(46,107,79,.7)">✍️ 관찰 기록하러 가기</button><button class="btn-primary" id="againBtn" style="background:#fff;color:#9E3D27;border:1.5px solid #E7DCC8;box-shadow:none;margin-top:9px">↺ 다시 실험하기</button></div>`;
+  $("#mx").onclick=()=>modal.classList.remove("open");
+  $("#againBtn").onclick=()=>{ modal.classList.remove("open"); fullReset(); };
+  if($("#recBtn")) $("#recBtn").onclick=()=>{ modal.classList.remove("open"); if(window.goRecord) window.goRecord(); };
+  modal.classList.add("open");
+  if(window.onExperimentDone) window.onExperimentDone();
+}
+modal.addEventListener("click",e=>{ if(e.target===modal) modal.classList.remove("open"); });
+
+/* ───────── 리셋 / 스테이지 ───────── */
+function resetScene(){
+  if(powderAnim){ powderAnim.cancel(); powderAnim=null; }
+  clearAnims(spoon, spoonInner, spoonLoad, matchG, matchFlame, flame, delivery, limeG, limeCloud, powder);
+  // 가루
+  powder.setAttribute("x",80); powder.setAttribute("y",4); powder.setAttribute("width",120); powder.setAttribute("height",13);
+  powder.setAttribute("fill",COL.copper); powder.style.opacity="0";
+  // 기구 즉시 숨김
+  delivery.style.transition="none"; delivery.style.opacity="0";
+  limeG.style.transition="none"; limeG.style.opacity="0";
+  limeWater.setAttribute("fill","#EAF1ED"); limeCloud.style.opacity="0";
+  // 동적 입자 제거
+  ["motesHost","bubbleHost","gasHost","sparkleHost","heatHost"].forEach(id=>{ document.getElementById(id).innerHTML=""; });
+  spoon.style.opacity="0"; matchG.style.opacity="0"; matchFlame.style.opacity="0"; spoonLoad.style.opacity="0";
+  extinguish();
+  eqCard.style.display="none"; atomBtn.classList.remove("ready"); stageWrap.classList.remove("dim");
+}
+function gotoStage(n){
+  cur=n; idx=0; busy=false;
+  tabs.querySelectorAll("button").forEach(b=>b.classList.toggle("active", +b.dataset.stage===n));
+  resetScene(); renderShelf();
+  if(n===0){ powder.setAttribute("fill",COL.copper); sceneHint.textContent="아래 선반에서 빛나는 약품·도구를 끌어다 놓으세요"; logReset(); }
+  else { powder.setAttribute("fill",COL.cuo); powder.style.opacity="1"; logReset(); addLog("⬛","(1단계에서 만든) 검은 산화구리가 시험관에 담겨 있어요."); }
+  showStep();
+}
+function logReset(){ logList.innerHTML=`<li style="opacity:.6; background:#fff; border-style:dashed; animation:none;">아직 기록이 없어요. 실험을 진행해 보세요.</li>`; logCleared=false; }
+function fullReset(){ tabs.querySelectorAll("button").forEach(b=>b.classList.remove("done")); gotoStage(0); }
+tabs.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b||busy)return; const n=+b.dataset.stage;
+  if(n===1 && !tabs.querySelector('[data-stage="0"]').classList.contains("done")){ showToast("먼저 ①구리의 산화를 끝내 주세요"); return; } gotoStage(n); });
+$("#resetBtn").addEventListener("click",()=>{ if(busy)return; fullReset(); });
+
+/* 시작 */
+gotoStage(0);
+})();
+</script>
+
+<script>
+/* ════════ 통합 앱: 기록 + 대시보드 (Firebase ↔ 데모) ════════
+   ▼ 배포 전 아래 firebaseConfig를 본인 Firebase 프로젝트 값으로 교체하세요.
+     Realtime Database 생성 후 databaseURL 필수. 수업용 임시 규칙:
+     { "rules": { ".read": true, ".write": true } }
+   설정 전에는 자동으로 '데모 모드'(같은 기기 내 임시 저장)로 동작합니다. */
+(()=>{
+"use strict";
+const firebaseConfig = {
+  apiKey: "AIzaSyAZYvdXuDn4Vo1UQInzEuTSG0Nhu0XyJkw",
+  authDomain: "middle2-82624.firebaseapp.com",
+  databaseURL: "https://middle2-82624-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "middle2-82624",
+  appId: "1:428784775543:web:3715f0598608c1b227f172"
+};
+const QUESTIONS = [
+  { id:"obs1", n:"①", q:"구리 가루를 가열했더니 색이 어떻게 변했나요?",
+    opts:[ {v:"붉은색 → 검은색", ok:true}, {v:"변화가 없었다"}, {v:"붉은색 → 흰색"} ] },
+  { id:"obs2", n:"②", q:"산화구리에 탄소를 섞어 가열했더니 가루 색은?",
+    opts:[ {v:"검은색 → 붉은색(구리)", ok:true}, {v:"그대로 검은색"}, {v:"흰색으로 변함"} ] },
+  { id:"lime", n:"②", q:"이때 옆에 연결한 석회수는 어떻게 되었나요?",
+    opts:[ {v:"뿌옇게 흐려졌다", ok:true}, {v:"변화가 없었다"}, {v:"붉게 변했다"} ] },
+  { id:"oxid", n:"③", q:"2CuO + C → 2Cu + CO₂ 에서 산소를 얻어 ‘산화’되는 물질은?",
+    opts:[ {v:"탄소(C)", ok:true}, {v:"산화구리(CuO)"}, {v:"구리(Cu)"} ] },
+  { id:"reduc", n:"③", q:"반대로 산소를 잃어 ‘환원’되는 물질은?",
+    opts:[ {v:"산화구리(CuO)", ok:true}, {v:"탄소(C)"}, {v:"산소(O₂)"} ] },
+  { id:"defox", n:"④", q:"‘산화’를 산소로 정의하면?",
+    opts:[ {v:"산소를 얻는 반응", ok:true}, {v:"산소를 잃는 반응"} ] },
+  { id:"gas", n:"⑤", q:"석회수가 뿌예진 까닭 — 새로 생긴 기체는?",
+    opts:[ {v:"이산화탄소(CO₂)", ok:true}, {v:"산소(O₂)"}, {v:"수소(H₂)"} ] },
+  { id:"simul", n:"⑥", q:"한 반응에서 산화와 환원은?",
+    opts:[ {v:"항상 동시에 일어난다", ok:true}, {v:"따로따로 일어난다"} ] },
+  { id:"wow", n:"✨", q:"가장 신기했던 점을 자유롭게 적어 보세요.", text:true },
+];
+const $ = id => document.getElementById(id);
+
+let MODE="demo", fb=null;
+(function initFB(){
+  const ok = typeof firebase!=="undefined"
+    && firebaseConfig.databaseURL && firebaseConfig.databaseURL.indexOf("여기에")<0
+    && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("여기에")<0;
+  if(ok){ try{ firebase.initializeApp(firebaseConfig); fb=firebase.database(); MODE="firebase"; }
+    catch(e){ console.warn("Firebase init 실패 → 데모", e); MODE="demo"; } }
+})();
+const demoStore={}, demoListeners={}; let curRef=null,curCb=null;
+function dbListen(room,onData){
+  if(MODE==="firebase"){ if(curRef&&curCb) curRef.off("value",curCb);
+    curRef=fb.ref("rooms/"+room+"/entries"); curCb=curRef.on("value",s=>onData(s.val()||{})); }
+  else { demoStore[room]=demoStore[room]||{}; demoListeners[room]=onData; onData(demoStore[room]); }
+}
+function dbSet(room,key,entry){
+  if(MODE==="firebase"){ fb.ref("rooms/"+room+"/entries/"+key).set(entry); }
+  else { demoStore[room]=demoStore[room]||{}; demoStore[room][key]=entry; if(demoListeners[room]) demoListeners[room](demoStore[room]); }
+}
+function dbClear(room){
+  if(MODE==="firebase"){ fb.ref("rooms/"+room+"/entries").remove(); }
+  else { demoStore[room]={}; if(demoListeners[room]) demoListeners[room](demoStore[room]); }
+}
+const keyOf = s => s.replace(/[.#$\[\]\/\s]/g,"_").slice(0,60) || "익명";
+
+let room="",myName="",myGroup="",myKey="",answers={};
+let submitted=false, lastMap={};
+
+(function modeBadge(){
+  const t=$("rc-modeTag"), b=$("rc-banner");
+  if(MODE==="firebase"){ t.textContent="실시간 공유 ON"; t.className="rc-mode live"; b.className="rc-banner hide"; }
+  else { t.textContent="데모 모드"; t.className="rc-mode demo";
+    b.innerHTML="<b>데모 모드입니다.</b> 지금은 같은 기기 안에서만 기록이 보여요. 코드 상단의 <b>firebaseConfig</b>에 Firebase 정보를 넣고 배포하면 학생들이 각자 휴대폰으로 적은 기록이 실시간으로 모입니다."; }
+})();
+
+function buildForm(){
+  const host=$("rc-qHost"); host.innerHTML="";
+  QUESTIONS.forEach(Q=>{
+    const card=document.createElement("div"); card.className="rc-q";
+    const qt=document.createElement("div"); qt.className="qt"; qt.innerHTML='<span class="n">'+Q.n+'</span>'+Q.q; card.appendChild(qt);
+    if(Q.text){ const ta=document.createElement("textarea"); ta.id="rc_ans_"+Q.id; ta.placeholder="여기에 적어요";
+      ta.addEventListener("input",()=>answers[Q.id]=ta.value); card.appendChild(ta);
+    } else { const w=document.createElement("div"); w.className="rc-opts";
+      Q.opts.forEach(o=>{ const b=document.createElement("button"); b.className="rc-opt"; b.textContent=o.v;
+        b.addEventListener("click",()=>{ answers[Q.id]=o.v; [...w.children].forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); });
+        w.appendChild(b); });
+      card.appendChild(w); }
+    host.appendChild(card);
+  });
+}
+
+const VIEWS=["sim","rec","dash"];
+function switchView(v){
+  if(v==="dash" && !submitted){ rcToast("기록을 모두 작성해 제출하면 대시보드가 열려요!"); return; }
+  document.querySelectorAll(".rc-apptabs button").forEach(b=>b.classList.toggle("on", b.dataset.view===v));
+  VIEWS.forEach(x=>{ const el=$("view-"+x); if(el) el.classList.toggle("on", x===v); });
+  if(v==="rec"){ const t=document.querySelector('.rc-apptabs [data-view="rec"]'); if(t) t.classList.remove("pulse"); }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll(".rc-apptabs button").forEach(b=> b.addEventListener("click",()=>switchView(b.dataset.view)));
+
+function setJoinedUI(){
+  $("rc-joinbar").style.display="none";
+  $("rc-joined").style.display="flex";
+  $("rc-whoami").innerHTML="📍 <b>"+esc(room)+"</b> · "+esc(myName)+(myGroup?" · "+esc(myGroup):"");
+  $("rc-roomtag").textContent=room;
+}
+function join(){
+  const rm=$("rc-room").value.trim(), nm=$("rc-name").value.trim(), gp=$("rc-group").value.trim();
+  if(!rm){ rcToast("방 코드를 입력하세요"); return; }
+  if(!nm){ rcToast("이름을 입력하세요"); return; }
+  room=rm; myName=nm; myGroup=gp; myKey=keyOf(nm+(gp?"_"+gp:""));
+  setJoinedUI(); dbListen(room, m=>{ lastMap=m; if(submitted) renderDash(m); }); rcToast("입장 완료! 관찰을 기록해 보세요");
+}
+$("rc-join").addEventListener("click", join);
+$("rc-change").addEventListener("click",()=>{ $("rc-joinbar").style.display="grid"; $("rc-joined").style.display="none"; });
+
+$("rc-submit").addEventListener("click",()=>{
+  if(!room){ rcToast("먼저 위에서 ‘입장’하세요"); switchView("rec"); return; }
+  const missing=QUESTIONS.filter(Q=>!Q.text && !answers[Q.id]);
+  if(missing.length){ rcToast("아직 답 안 한 문항이 "+missing.length+"개 있어요"); return; }
+  dbSet(room, myKey, { name:myName, group:myGroup||"", ans:Object.assign({},answers), ts:Date.now() });
+  submitted=true; unlockDash(); renderDash(lastMap);
+  $("rc-done").classList.add("show"); rcToast("제출 완료!");
+  setTimeout(()=>switchView("dash"), 550);
+});
+
+function unlockDash(){ const t=document.querySelector('.rc-apptabs [data-view="dash"]'); if(t){ t.classList.remove("locked"); t.textContent="📊 대시보드"; } }
+function renderDash(map){
+  const entries=Object.entries(map||{}).map(([k,v])=>Object.assign({k:k},v)).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  $("rc-cnt").textContent=entries.length;
+  const rc=$("rc-rostercard"), ros=$("rc-roster");
+  if(entries.length){ rc.style.display="block"; ros.innerHTML="";
+    entries.forEach(e=>{ const s=document.createElement("span"); s.className="rc-who"+(e.k===myKey?" me":"");
+      s.textContent=e.name+(e.group?" · "+e.group:""); ros.appendChild(s); });
+  } else rc.style.display="none";
+  const dh=$("rc-distHost"); dh.innerHTML="";
+  QUESTIONS.filter(Q=>!Q.text).forEach(Q=>{
+    const card=document.createElement("div"); card.className="rc-dcard";
+    const h=document.createElement("h3"); h.innerHTML='<span style="color:#C75D3C;font-weight:900">'+Q.n+'</span> '+Q.q; card.appendChild(h);
+    const total=entries.length||1;
+    Q.opts.forEach(o=>{
+      const cnt=entries.filter(e=>e.ans&&e.ans[Q.id]===o.v).length, pct=Math.round(cnt/total*100);
+      const bar=document.createElement("div"); bar.className="rc-bar";
+      bar.innerHTML='<div class="bl"><span class="lab">'+esc(o.v)+'</span>'
+        +'<span class="cnt">'+cnt+'명 · '+(entries.length?pct:0)+'%</span></div>'
+        +'<div class="rc-track"><div class="rc-fill" style="width:'+(entries.length?pct:0)+'%"></div></div>';
+      card.appendChild(bar);
+    });
+    dh.appendChild(card);
+  });
+  const wh=$("rc-wowHost"); wh.innerHTML="";
+  const wows=entries.filter(e=>e.ans&&e.ans.wow&&e.ans.wow.trim());
+  if(!wows.length){ wh.innerHTML='<div class="rc-empty">아직 기록이 없어요.</div>'; }
+  else wows.forEach(e=>{ const d=document.createElement("div"); d.className="rc-wow";
+    d.innerHTML='<div class="nm">'+esc(e.name)+(e.group?" · "+esc(e.group):"")+'</div><div class="tx">'+esc(e.ans.wow)+'</div>'; wh.appendChild(d); });
+}
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+$("rc-clear").addEventListener("click",()=>{ if(!room){ rcToast("먼저 입장하세요"); return; }
+  if(confirm("방 '"+room+"'의 모든 기록을 정말 지울까요? 되돌릴 수 없어요.")){ dbClear(room); rcToast("기록을 지웠어요"); } });
+
+function rcToast(m){ const t=$("rc-toast"); t.textContent=m; t.classList.add("show"); clearTimeout(rcToast._t); rcToast._t=setTimeout(()=>t.classList.remove("show"),1900); }
+
+/* 시뮬레이션 → 기록 연결 훅 */
+window.goRecord = ()=>{ switchView("rec"); if(!room) setTimeout(()=>$("rc-name").focus(),300); };
+window.onExperimentDone = ()=>{ const t=document.querySelector('.rc-apptabs [data-view="rec"]'); if(t) t.classList.add("pulse");
+  rcToast("실험 끝! ✍️ ‘기록’ 탭에서 관찰을 적어보세요"); };
+
+buildForm();
+})();
+</script>
+</body>
+</html>
