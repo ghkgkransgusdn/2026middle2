@@ -141,6 +141,8 @@
   .rc-apptabs button{font:inherit;font-weight:800;font-size:13.5px;border:0;cursor:pointer;padding:9px 15px;border-radius:10px;color:#6E6356;background:transparent;}
   .rc-apptabs button.on{background:#fff;color:#2B2620;box-shadow:0 2px 0 rgba(0,0,0,.04);}
   .rc-apptabs button.locked{opacity:.55;}
+  .rc-key{font:inherit;font-weight:800;font-size:12px;border:1.5px solid #E7DCC8;background:#fff;color:#6E6356;border-radius:999px;padding:7px 12px;cursor:pointer;}
+  .rc-key.on{background:#2E6B4F;color:#fff;border-color:#2E6B4F;}
   .rc-apptabs button.pulse{color:#C75D3C;animation:rcpulse 1.3s ease-in-out infinite;}
   @keyframes rcpulse{0%,100%{box-shadow:0 0 0 0 rgba(199,93,60,0);}50%{box-shadow:0 0 0 5px rgba(199,93,60,.28);}}
   .rc-mode{font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;}
@@ -192,7 +194,7 @@
   .rc-roster{display:flex;flex-wrap:wrap;gap:6px;}
   .rc-who{font-size:12px;font-weight:700;background:#FBF3E4;border:1px solid #E7DCC8;border-radius:999px;padding:5px 11px;}
   .rc-who.me{background:#FBEADF;border-color:#C75D3C;color:#9E3D27;}
-  .rc-ftools{margin-top:18px;text-align:center;}
+  .rc-ftools{margin-top:18px;text-align:center;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap;}
   .rc-ftools button{font:inherit;font-size:11.5px;color:#6E6356;background:none;border:0;text-decoration:underline;cursor:pointer;}
   .rc-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(18px);background:#2B2620;color:#fff;font-weight:700;font-size:13.5px;padding:11px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:120;}
   .rc-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -208,13 +210,16 @@
     <button data-view="rec">✍️ 기록</button>
     <button data-view="dash" class="locked">🔒 대시보드</button>
   </div>
-  <span class="rc-mode demo" id="rc-modeTag">데모 모드</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="rc-key" id="rc-teacher" title="교사 모드">🔑 교사</button>
+    <span class="rc-mode demo" id="rc-modeTag">데모 모드</span>
+  </div>
 </div>
 
 <section class="rc-view on" id="view-sim">
 
 <header>
-  <div class="brand"><span class="eyebrow">산화와 환원</span><h1>산화·환원 가상 실험실</h1></div>
+  <div class="brand"><span class="eyebrow">중2 영재 · 산화와 환원</span><h1>산화·환원 가상 실험실</h1></div>
   <div class="stage-tabs" id="tabs">
     <button data-stage="0" class="active"><span class="dot">1</span>구리의 산화</button>
     <button data-stage="1"><span class="dot">2</span>산화구리의 환원</button>
@@ -366,7 +371,10 @@
   <div class="rc-dcard" id="rc-rostercard" style="display:none"><h3>📝 기록한 친구들</h3><div class="rc-roster" id="rc-roster"></div></div>
   <div id="rc-distHost"></div>
   <div class="rc-dcard"><h3>💡 가장 신기했던 점 모음</h3><div class="rc-wowwrap" id="rc-wowHost"><div class="rc-empty">아직 기록이 없어요.</div></div></div>
-  <div class="rc-ftools"><button id="rc-clear">⚠ 이 방의 모든 기록 지우기 (교사용)</button></div>
+  <div class="rc-ftools" id="rc-teacherTools" style="display:none">
+    <button class="rc-btn" id="rc-reveal" style="font-size:13px;padding:9px 16px">✅ 정답 공개</button>
+    <button id="rc-clear">⚠ 이 방의 모든 기록 지우기</button>
+  </div>
 </div></section>
 
 <div class="rc-toast" id="rc-toast"></div>
@@ -708,12 +716,14 @@ gotoStage(0);
 (()=>{
 "use strict";
 const firebaseConfig = {
-  apiKey: "AIzaSyAZYvdXuDn4Vo1UQInzEuTSG0Nhu0XyJkw",
-  authDomain: "middle2-82624.firebaseapp.com",
-  databaseURL: "https://middle2-82624-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "middle2-82624",
-  appId: "1:428784775543:web:3715f0598608c1b227f172"
+  apiKey: "여기에_API_KEY",
+  authDomain: "여기에_PROJECT.firebaseapp.com",
+  databaseURL: "https://여기에_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "여기에_PROJECT_ID",
+  appId: "여기에_APP_ID"
 };
+/* 교사 모드 PIN — 원하는 번호로 바꾸세요. 이 PIN을 입력해야 대시보드 열람·정답 공개·기록 삭제가 가능합니다. */
+const TEACHER_PIN = "7950";
 const QUESTIONS = [
   { id:"obs1", n:"①", q:"구리 가루를 가열했더니 색이 어떻게 변했나요?",
     opts:[ {v:"붉은색 → 검은색", ok:true}, {v:"변화가 없었다"}, {v:"붉은색 → 흰색"} ] },
@@ -753,14 +763,16 @@ function dbSet(room,key,entry){
   if(MODE==="firebase"){ fb.ref("rooms/"+room+"/entries/"+key).set(entry); }
   else { demoStore[room]=demoStore[room]||{}; demoStore[room][key]=entry; if(demoListeners[room]) demoListeners[room](demoStore[room]); }
 }
-function dbClear(room){
-  if(MODE==="firebase"){ fb.ref("rooms/"+room+"/entries").remove(); }
-  else { demoStore[room]={}; if(demoListeners[room]) demoListeners[room](demoStore[room]); }
+function dbClear(room, done){
+  if(MODE==="firebase"){ fb.ref("rooms/"+room+"/entries").remove().then(()=>done&&done(true)).catch(e=>{ console.warn("clear 실패:",e); done&&done(false); }); }
+  else { demoStore[room]={}; if(demoListeners[room]) demoListeners[room](demoStore[room]); done&&done(true); }
 }
 const keyOf = s => s.replace(/[.#$\[\]\/\s]/g,"_").slice(0,60) || "익명";
 
 let room="",myName="",myGroup="",myKey="",answers={};
 let submitted=false, lastMap={};
+let teacher=false, revealAns=false;
+const canDash = () => submitted || teacher;
 
 (function modeBadge(){
   const t=$("rc-modeTag"), b=$("rc-banner");
@@ -787,7 +799,7 @@ function buildForm(){
 
 const VIEWS=["sim","rec","dash"];
 function switchView(v){
-  if(v==="dash" && !submitted){ rcToast("기록을 모두 작성해 제출하면 대시보드가 열려요!"); return; }
+  if(v==="dash" && !canDash()){ rcToast("기록을 모두 작성해 제출하면 대시보드가 열려요!"); return; }
   document.querySelectorAll(".rc-apptabs button").forEach(b=>b.classList.toggle("on", b.dataset.view===v));
   VIEWS.forEach(x=>{ const el=$("view-"+x); if(el) el.classList.toggle("on", x===v); });
   if(v==="rec"){ const t=document.querySelector('.rc-apptabs [data-view="rec"]'); if(t) t.classList.remove("pulse"); }
@@ -806,7 +818,7 @@ function join(){
   if(!rm){ rcToast("방 코드를 입력하세요"); return; }
   if(!nm){ rcToast("이름을 입력하세요"); return; }
   room=rm; myName=nm; myGroup=gp; myKey=keyOf(nm+(gp?"_"+gp:""));
-  setJoinedUI(); dbListen(room, m=>{ lastMap=m; if(submitted) renderDash(m); }); rcToast("입장 완료! 관찰을 기록해 보세요");
+  setJoinedUI(); dbListen(room, m=>{ lastMap=m; if(canDash()) renderDash(m); }); rcToast("입장 완료! 관찰을 기록해 보세요");
 }
 $("rc-join").addEventListener("click", join);
 $("rc-change").addEventListener("click",()=>{ $("rc-joinbar").style.display="grid"; $("rc-joined").style.display="none"; });
@@ -837,10 +849,11 @@ function renderDash(map){
     const total=entries.length||1;
     Q.opts.forEach(o=>{
       const cnt=entries.filter(e=>e.ans&&e.ans[Q.id]===o.v).length, pct=Math.round(cnt/total*100);
+      const mark = revealAns && o.ok;
       const bar=document.createElement("div"); bar.className="rc-bar";
-      bar.innerHTML='<div class="bl"><span class="lab">'+esc(o.v)+'</span>'
+      bar.innerHTML='<div class="bl"><span class="lab">'+esc(o.v)+(mark?'<span class="okk">✓ 정답</span>':'')+'</span>'
         +'<span class="cnt">'+cnt+'명 · '+(entries.length?pct:0)+'%</span></div>'
-        +'<div class="rc-track"><div class="rc-fill" style="width:'+(entries.length?pct:0)+'%"></div></div>';
+        +'<div class="rc-track"><div class="rc-fill '+(mark?'okk':'')+'" style="width:'+(entries.length?pct:0)+'%"></div></div>';
       card.appendChild(bar);
     });
     dh.appendChild(card);
@@ -852,8 +865,36 @@ function renderDash(map){
     d.innerHTML='<div class="nm">'+esc(e.name)+(e.group?" · "+esc(e.group):"")+'</div><div class="tx">'+esc(e.ans.wow)+'</div>'; wh.appendChild(d); });
 }
 function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-$("rc-clear").addEventListener("click",()=>{ if(!room){ rcToast("먼저 입장하세요"); return; }
-  if(confirm("방 '"+room+"'의 모든 기록을 정말 지울까요? 되돌릴 수 없어요.")){ dbClear(room); rcToast("기록을 지웠어요"); } });
+/* 교사 모드 */
+function enterTeacher(){
+  teacher=true; revealAns=false;
+  $("rc-teacher").classList.add("on"); $("rc-teacher").textContent="🔑 교사 ✓";
+  $("rc-teacherTools").style.display="flex";
+  unlockDash();
+  switchView("dash"); renderDash(lastMap);
+  rcToast("교사 모드 — 대시보드 열람·정답 공개·삭제 가능");
+}
+$("rc-teacher").addEventListener("click",()=>{
+  if(teacher){ rcToast("이미 교사 모드예요"); switchView("dash"); return; }
+  if(!room){ rcToast("먼저 방 코드로 ‘입장’하세요"); switchView("rec"); setTimeout(()=>$("rc-room").focus(),300); return; }
+  const p=prompt("교사 PIN을 입력하세요");
+  if(p===null) return;
+  if(p===TEACHER_PIN) enterTeacher();
+  else rcToast("PIN이 올바르지 않아요");
+});
+$("rc-reveal").addEventListener("click",()=>{
+  if(!teacher) return;
+  revealAns=!revealAns;
+  $("rc-reveal").textContent = revealAns ? "🙈 정답 가리기" : "✅ 정답 공개";
+  renderDash(lastMap);
+});
+$("rc-clear").addEventListener("click",()=>{
+  if(!teacher){ rcToast("교사 모드에서만 가능해요"); return; }
+  if(!room){ rcToast("먼저 입장하세요"); return; }
+  if(confirm("방 '"+room+"'의 모든 기록을 정말 지울까요? 되돌릴 수 없어요.")){
+    dbClear(room, ok=> rcToast(ok ? "기록을 모두 지웠어요" : "삭제 실패 — Realtime Database 규칙에서 쓰기(.write) 권한을 확인하세요"));
+  }
+});
 
 function rcToast(m){ const t=$("rc-toast"); t.textContent=m; t.classList.add("show"); clearTimeout(rcToast._t); rcToast._t=setTimeout(()=>t.classList.remove("show"),1900); }
 
