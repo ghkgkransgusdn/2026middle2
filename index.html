@@ -135,14 +135,21 @@
   @media (prefers-reduced-motion: reduce){*{animation-duration:.001s!important; transition-duration:.05s!important;}}
 
   /* ───────── 통합: 상단 내비 + 기록 + 대시보드 ───────── */
-  .rc-appbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  .rc-appbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;row-gap:8px;
     max-width:1080px;margin:0 auto;padding:10px 20px;background:rgba(255,250,239,.92);backdrop-filter:blur(8px);}
+  .rc-apptabs{flex:1 1 auto;}
   .rc-apptabs{display:flex;gap:6px;background:#F1E6D2;padding:5px;border-radius:14px;border:1px solid #E7DCC8;}
-  .rc-apptabs button{font:inherit;font-weight:800;font-size:13.5px;border:0;cursor:pointer;padding:9px 15px;border-radius:10px;color:#6E6356;background:transparent;}
+  .rc-apptabs button{font:inherit;font-weight:800;font-size:13.5px;border:0;cursor:pointer;padding:9px 15px;border-radius:10px;color:#6E6356;background:transparent;white-space:nowrap;}
   .rc-apptabs button.on{background:#fff;color:#2B2620;box-shadow:0 2px 0 rgba(0,0,0,.04);}
   .rc-apptabs button.locked{opacity:.55;}
   .rc-key{font:inherit;font-weight:800;font-size:12px;border:1.5px solid #E7DCC8;background:#fff;color:#6E6356;border-radius:999px;padding:7px 12px;cursor:pointer;}
   .rc-key.on{background:#2E6B4F;color:#fff;border-color:#2E6B4F;}
+  @media(max-width:430px){
+    .rc-appbar{padding:9px 14px;gap:7px;}
+    .rc-apptabs{width:100%;}
+    .rc-apptabs button{flex:1;padding:9px 6px;font-size:12.5px;}
+    .rc-key{padding:7px 10px;font-size:11.5px;} .rc-mode{font-size:10px;padding:4px 8px;}
+  }
   .rc-apptabs button.pulse{color:#C75D3C;animation:rcpulse 1.3s ease-in-out infinite;}
   @keyframes rcpulse{0%,100%{box-shadow:0 0 0 0 rgba(199,93,60,0);}50%{box-shadow:0 0 0 5px rgba(199,93,60,.28);}}
   .rc-mode{font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;}
@@ -716,16 +723,14 @@ gotoStage(0);
 (()=>{
 "use strict";
 const firebaseConfig = {
-  apiKey: "AIzaSyAZYvdXuDn4Vo1UQInzEuTSG0Nhu0XyJkw",
-  authDomain: "middle2-82624.firebaseapp.com",
-  databaseURL: "https://middle2-82624-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "middle2-82624",
-  storageBucket: "middle2-82624.firebasestorage.app",
-  messagingSenderId: "428784775543",
-  appId: "1:428784775543:web:3715f0598608c1b227f172"
+  apiKey: "여기에_API_KEY",
+  authDomain: "여기에_PROJECT.firebaseapp.com",
+  databaseURL: "https://여기에_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "여기에_PROJECT_ID",
+  appId: "여기에_APP_ID"
 };
 /* 교사 모드 PIN — 원하는 번호로 바꾸세요. 이 PIN을 입력해야 대시보드 열람·정답 공개·기록 삭제가 가능합니다. */
-const TEACHER_PIN = "7950";
+const TEACHER_PIN = "1234";
 const QUESTIONS = [
   { id:"obs1", n:"①", q:"구리 가루를 가열했더니 색이 어떻게 변했나요?",
     opts:[ {v:"붉은색 → 검은색", ok:true}, {v:"변화가 없었다"}, {v:"붉은색 → 흰색"} ] },
